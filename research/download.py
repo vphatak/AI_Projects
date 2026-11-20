@@ -3,7 +3,8 @@ usage: download.py TF1,TF2 SYM1,SYM2   (SYM = OANDA instrument prefix e.g. XAUUS
 import sys, io, os, requests, pandas as pd
 from concurrent.futures import ThreadPoolExecutor
 from huggingface_hub import HfApi
-OUT = '/home/user/data'
+OUT = os.environ.get('MT5_DATA', '/home/user/data')
+os.makedirs(OUT, exist_ok=True)
 api = HfApi()
 allds = {d.id.split('/')[1].split('_')[1]: d.id for d in api.list_datasets(author='bunqi')}
 s = requests.Session()

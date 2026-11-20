@@ -1,6 +1,6 @@
 """Shared helpers: data loading, server clock, daily bars, Wilder ATR, costs, stats, trial log."""
 import json, os, numpy as np, pandas as pd
-DATA = '/home/user/data'
+DATA = os.environ.get('MT5_DATA', '/home/user/data')   # set MT5_DATA to the folder download.py wrote to
 ROOT = os.path.dirname(os.path.abspath(__file__))
 DESIGN_END = pd.Timestamp('2018-01-01')   # design: Apr 2006 .. Dec 2017 ; OOS: Jan 2018 .. Nov 2026
 START = pd.Timestamp('2006-04-01')
