@@ -1,6 +1,8 @@
-"""Shared helpers: data loading, server clock, daily bars, Wilder ATR, costs, stats, trial log."""
-import json, os, numpy as np, pandas as pd
-DATA = os.environ.get('MT5_DATA', '/home/user/data')   # set MT5_DATA to the folder download.py wrote to
+"""Shared helpers: data loading, server clock, daily bars, Wilder ATR, costs, stats."""
+import os, numpy as np, pandas as pd
+DATA = os.environ.get('MT5_DATA', os.path.expanduser('~/mt5_data'))   # full history, or the design-only copy from make_design.py
+DESIGN_ONLY = os.environ.get('MT5_DESIGN_ONLY') == '1'                 # researchers set this; load() then refuses post-2017 bars
+SEAL_UTC = 1514757600                                                  # 2017-12-31 22:00 UTC = 00:00 server time, 1 Jan 2018
 ROOT = os.path.dirname(os.path.abspath(__file__))
 DESIGN_END = pd.Timestamp('2018-01-01')   # design: Apr 2006 .. Dec 2017 ; OOS: Jan 2018 .. Nov 2026
 START = pd.Timestamp('2006-04-01')
@@ -8,6 +10,8 @@ START = pd.Timestamp('2006-04-01')
 def load(sym, tf):
     """Bars with server-clock timestamp 'st' (New York local time + 7h), bar OPEN time."""
     d = pd.read_parquet(f'{DATA}/{sym}_{tf}.parquet')
+    if DESIGN_ONLY and d.time.max() >= SEAL_UTC:
+        raise RuntimeError(f'{sym}_{tf}: out-of-sample bars present but MT5_DESIGN_ONLY=1. Point MT5_DATA at the design folder.')
     ny = pd.to_datetime(d.time, unit='s', utc=True).dt.tz_convert('America/New_York').dt.tz_localize(None)
     d['st'] = ny + pd.Timedelta(hours=7)
     d = d[d.st.dt.dayofweek < 5].reset_index(drop=True)
@@ -61,5 +65,3 @@ def tstats(tr, col='R'):
 def split(tr, col='date'):
     d = tr[(tr[col] >= START) & (tr[col] < DESIGN_END)]; o = tr[tr[col] >= DESIGN_END]
     return d, o
-def log_trial(rec):
-    with open(f'{ROOT}/trials.jsonl', 'a') as f: f.write(json.dumps(rec, default=str) + '\n')

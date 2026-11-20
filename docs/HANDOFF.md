@@ -9,20 +9,23 @@ Everything here was measured or read in earlier sessions. Each item says where i
 | `docs/briefs/research-brief.md` | The research protocol (design/out-of-sample split, 32-trial budget, pass rule, Step 0 targets) | Yes |
 | `docs/briefs/ai-bot-brief.md` | The build brief (engines, ONNX decision model, LLM advisor, risk guard) | Yes |
 | "Keel XAU" document (Claude Mythos, trader's first account) | Business plan and test report for a gold-only EA | Yes. Its `KeelXAU.mq5` source and trade list were not available. |
-| "Benchmark and blueprint" document (Claude Mythos, trader's second account) | Study of top mql5.com EAs plus an architecture | No. Only the conversation that produced it was seen. |
+| `docs/prior/benchmark-and-blueprint.md` (Claude Mythos, trader's second account) | Study of top mql5.com EAs, proposed targets, architecture, strategy sleeves and data feeds | Yes. Its architecture diagram did not survive the export. |
 | GPT `GoldRangeNY` conversation | Six gold EAs benchmarked; a New York morning range-breakout EA written | Summary only. The `.mq5` and three `.md` files were not available. |
 | `research/` in this repo | Step 0 reproduction code and outputs | Yes (written in the session that produced this file) |
 
 ## 2. What the trader has said they want
 
-| Topic | Research and bot briefs | Later conversation (second Mythos account) | Open? |
+| Topic | Research and bot briefs | Blueprint and the conversation behind it | Open? |
 |---|---|---|---|
-| Return target | 50% a year at a 25% normal worst drawdown; 75% drawdown only as a rare event | "Over 75% annual return", higher than QQQ | Yes |
-| Markets | Gold, index CFDs, FX | All of those, with capital moved to whichever instrument is most profitable | No conflict |
-| Styles | Rule-based engines | Opening range breakout, scalping, swing, volatility and fundamental views | No conflict; each is a trial |
-| AI | ONNX decision model plus an LLM advisor that can only lower risk | An LLM analyst reading news and fundamentals to decide "when to go big", possibly a small in-house analyst model | Yes: "go big" versus a hard size cap |
-| Who uses it | One trader, own terminal | "Customers" pointed to Claude, GPT or Gemini | Yes |
-| Broker | None named; OANDA mid-price data | Coinexx demo, probably on a VPS | Yes |
+| Return target | 50% a year at a 25% median worst drawdown; 75% drawdown only as a rare event | Gate to go live: 40% a year with at most 20% drawdown. Stretch: 75% or more with a 25% hard cap | Yes |
+| Markets | Gold, index CFDs, FX | The same, with capital moved each day to whichever sleeve is working | No conflict |
+| Styles | Rule-based engines, each a trial | Five sleeves: opening range breakout, volatility breakout, trend swing, mean-reversion scalp, macro "go big" | No conflict; each sleeve is a trial |
+| Where the AI runs | ONNX decision model loaded inside the EA; LLM advisor called by WebRequest | A Python "brain" (LightGBM quant model, LLM analyst, allocator) talking to a thin EA over a local socket | Yes |
+| Sizing by AI | The AI moves size between zero and a fixed cap and can never exceed it | 1% risk per trade by default, raised to at most 2.5% in "go big" mode when both AI layers agree | Yes |
+| Loss limits | Daily and total loss limits are inputs | 3% daily stop, 10% weekly stop, kill switch at 20% drawdown | No conflict; these are candidate defaults |
+| Data | OANDA mid prices, CFTC, event calendar | Adds paid feeds for stocks, news, fundamentals and a calendar: about $150 a month lean, $420 full | Yes: spending |
+| Who uses it | One trader, own terminal | Asked as an open question: own capital first, or a product later | Yes |
+| Broker | None named | Coinexx for demo; Windows VPS near the broker | Yes |
 | Live trading | None | Demo for now | No conflict |
 
 ## 3. Results from earlier work
@@ -38,11 +41,14 @@ Everything here was measured or read in earlier sessions. Each item says where i
 
 These seven families were tried on the same design data this project uses. They sit outside the 32-trial budget, but they are part of the count of things tried and belong in `TRIALS.md` as prior work.
 
-### Benchmark and blueprint (Mythos, second account), from the conversation only
+### Benchmark and blueprint (Mythos, second account)
 
-- Most 600% to 900% "growth" figures on mql5.com come from tiny accounts, grid or martingale bots, or backtests. Nearly all the leaders trade only gold.
-- Proposed architecture: MT5 EA for execution and risk, a Python side with a small quant model and an LLM analyst, and a capital allocator. Data feeds estimated at about $150 a month.
-- Its four closing questions to the trader were not seen. The most important was the maximum acceptable drawdown.
+Full text is in `docs/prior/benchmark-and-blueprint.md`. It contains no backtest; every strategy in it is a proposal.
+
+- Most 600% to 900% "growth" figures on mql5.com come from tiny accounts with deposits and withdrawals, grid or martingale bots, or backtests. Nearly all the leaders trade only gold. The no-grid systems with live data show 7% to 26% in a good month with drawdowns of 3% to 30%. Several of its figures come from a competing seller's blog and are marked as such.
+- It proposes five sleeves. Two overlap with families the Keel session already rejected on design data: "volatility breakout" (Keel: volatility breakout from the day's open, no edge) and "trend swing" (Keel: daily breakout trend-following on gold and on 13 markets, profit factor 1.00 to 1.06). A trial on either needs to say what is different.
+- Its "macro go big" sleeve depends on an LLM reading news and fundamentals. The document itself notes that this cannot be backtested without news timestamped to the second.
+- Its four questions to the trader (drawdown cap, own capital or product, data tier, a repository) have not been answered as far as this file knows.
 
 ### GoldRangeNY (GPT)
 
@@ -80,7 +86,7 @@ The averaging engine's t of 6.16 rests on a design period with a single stop-out
 - Stop-outs found: AUDNZD June 2015 (design), AUDNZD Nov 2019, AUDCAD 4 Apr 2025.
 - Nobody has said where the targets for the oversold-close and averaging engines came from. The gold target came from the Keel document. A reference trade list or reference code would settle this.
 
-The research brief says to stop and report on a mismatch like this. It has been reported to the trader; no decision has come back.
+The research brief says to stop and report on a mismatch like this. It has been reported to the trader; no decision has come back. Three readings have now been tried against a target that is itself an out-of-sample number. Trying more until one fits would be tuning on out-of-sample data, so the next move is the trader's.
 
 ### Readings chosen where a rule admitted two
 
@@ -107,6 +113,7 @@ Capped averaging (`research/step0_avg.py`):
 
 - The 30-trade independent re-simulation has not been run for any Step 0 engine.
 - `TRIALS.md` does not exist yet. No Step 1 trial has been run: 0 of 32 spent.
+- Neither earlier expert advisor (`KeelXAU.mq5`, `GoldRangeNY.mq5`) is in this repo. Both are uncompiled. The trader has them in other accounts.
 - No financing model, no CFTC data, no event calendar.
 
 ## 5. Data notes
@@ -119,7 +126,11 @@ Capped averaging (`research/step0_avg.py`):
 - First bars: gold 19 Mar 2006; SPX500, NAS100, US30 and DE30 March 2003; AUDNZD May 2004. The last bar seen was 20 Nov 2026, a partial day.
 - DE30 has about 42,000 five-minute bars a year until 2018 and about 61,000 from 2019. Its trading hours were extended, so an intraday DE30 rule spans two regimes.
 - SPX500 has fewer five-minute bars in 2012 to 2017 (60,000 to 66,000 a year against about 70,000). Check for gaps before trusting intraday results there.
-- Download with plain HTTPS from `https://huggingface.co/datasets/bunqi/<repo>/resolve/main/<path>`; it redirects to `us.aws.cdn.hf.co`. `research/download.py` does this with 16 threads and writes one parquet per market and timeframe to the folder named by `MT5_DATA`. Eight markets at three timeframes took about a minute.
-- Already fetched in the earlier session (not in the repo; rerun the script): daily, hourly and 5-minute for XAUUSD, SPX500USD, NAS100USD, US30USD, DE30EUR, AUDNZD, AUDCAD, NZDCAD; daily and hourly for 42 more FX, metal, energy, bond and index symbols. No 1-minute data.
+- Files are fetched with plain HTTPS from `https://huggingface.co/datasets/bunqi/<repo>/resolve/main/<path>`, which redirects to `us.aws.cdn.hf.co`.
+- `python research/download.py D,60,5 XAUUSD,SPX500USD` fetches with 16 threads, checks every chunk's row count against its `.pod` sidecar, and writes one parquet per market and timeframe (for example `XAUUSD_5.parquet`) to the folder named by `MT5_DATA` (default `~/mt5_data`). It exits with status 1 on any failure. Symbols are the OANDA codes in the dataset names. Eight markets at three timeframes took about a minute.
+- `python research/make_design.py FULL_FOLDER DESIGN_FOLDER` writes the design-only copy: every bar before 00:00 server time on 1 Jan 2018.
+- With `MT5_DESIGN_ONLY=1` set, `research/common.py` refuses to load a file that contains later bars. Frozen runs read the full folder, so that ATR and moving averages have their warm-up, and report from 2018 onward.
+- `research/out/` and `research/out_gold_trend.parquet` hold the Step 0 trade lists, including trades after 2017. That is by design for the three known engines, whose targets are out-of-sample figures. No other out-of-sample result exists anywhere in the repo.
+- Fetched in the earlier session, in a cloud container that no longer exists (rerun the script): daily, hourly and 5-minute for XAUUSD, SPX500USD, NAS100USD, US30USD, DE30EUR, AUDNZD, AUDCAD, NZDCAD; daily and hourly for 42 more FX, metal, energy, bond and index symbols. No 1-minute data.
 - CFTC history files (for example `https://www.cftc.gov/files/dea/history/fut_fin_txt_2020.zip`) return 200 with a browser User-Agent and 403 without one.
 - FRED (`https://fred.stlouisfed.org/graph/fredgraph.csv?id=DFF`) was reachable, for financing rates.
